@@ -1,0 +1,1 @@
+const t={key:"v-11a5a1f8",path:"/credits.html",title:"Credits",lang:"en-US",frontmatter:{title:"Credits",sidebar:!1},excerpt:"",headers:[],filePathRelative:"credits.md",git:{updatedTime:1649830166e3,contributors:[{name:"GitHub Actions - update submodules",email:"actions@github.com",commits:1}]}};export{t as data};
