@@ -45,22 +45,27 @@ function getJbDevArr(osJbArr, os) {
     return retArr
 }
 
+const downloadTextObj = {
+    "ipsw": "IPSW",
+    "installassistant": "InstallAssistant",
+    "ota": "OTA"
+}
+
+function getUrl(links) {
+    if (!links) return null
+    return links.sort((a,b) => {
+        if (a.active > b.active) return -1
+        if (a.active < b.active) return 1
+        if (a.preferred > b.preferred) return -1
+        if (a.preferred < b.preferred) return 1
+        return 0
+    })[0].url
+}
 
 function getDeviceList(os) {
     const osDevMap = os.deviceMap
     
     let groupArr = []
-
-    function getUrl(links) {
-        if (!links) return null
-        return links.sort((a,b) => {
-            if (a.active > b.active) return -1
-            if (a.active < b.active) return 1
-            if (a.preferred > b.preferred) return -1
-            if (a.preferred < b.preferred) return 1
-            return 0
-        })[0].url
-    }
 
     function getDownloadLink(device) {
         if (!os.sources) return null
@@ -70,12 +75,6 @@ function getDeviceList(os) {
         let url
         if (!source.links) url = null
         else url = getUrl(source.links)
-
-        let downloadTextObj = {
-            "ipsw": "IPSW",
-            "installassistant": "InstallAssistant",
-            "ota": "OTA"
-        }
 
         return {
             type: source.type,
@@ -215,7 +214,7 @@ function getDevicePageData(os) {
         if (links.length == 1 || [...new Set(links.map(x => x.link.url))].length == 1) {
             icons = [{
                 class: 'fas fa-download',
-                link: links[0].link.url
+                link: links[0].link.url,
             }]
             links = links.slice(0,1)
             links[0].label = `Download ${links[0].link.text}`
@@ -226,7 +225,13 @@ function getDevicePageData(os) {
             key: dev.key,
             subtitle: (dev.released && dev.released[0]) ? getReleaseDate(Array.isArray(dev.released) ? dev.released[0] : dev.released) : '',
             subgroups: dev.subgroups || [],
-            links: links.map(x => { return { text: x.label || x.name, key: x.key, link: x.link.url, icon: 'fas fa-download' }}),
+            links: links.map(x => { return {
+                text: x.label || x.name,
+                key: x.key,
+                link: x.link.url,
+                icon: 'fas fa-download',
+                type: x.link.type
+            }}),
             img: img.key,
             imgFlags: {
                 internal: true,
@@ -360,18 +365,37 @@ function getTitle(os) {
                 delete x.active
                 return x
             })
-        }
+        },
+        image: os.appledbWebImage ? {
+            url: os.appledbWebImage.id,
+            align: os.appledbWebImage.align
+        } : { url: null, align: 'right'}
     }
 }
 
 for (const os of osArr) {
-    const deviceGrid = getDevicePageData(os)
+    let deviceGrid = getDevicePageData(os)
     let singleDownload = []
 
     if (deviceGrid.filter(x => x.singleDownload).length) {
         singleDownload = [deviceGrid[0].singleDownload]
         singleDownload[0].text = `<i class="${singleDownload[0].icon}"></i> ${singleDownload[0].text}`
     }
+
+    if (
+        os.osStr == 'macOS' &&
+        os.sources && 
+        os.sources.length == 2 &&
+        os.sources.map(x => x.type).every(x => ['ipsw','installassistant'].includes(x))
+    ) singleDownload = ['ipsw','installassistant'].map(x => {
+        return {
+            text: `<i class="fas fa-download"></i> Download ${downloadTextObj[x]}`,
+            key: x,
+            link: getUrl(os.sources.find(y => y.type == x).links),
+            icon: 'fas fa-download',
+            type: x
+        }
+    })
 
     let obj = {
         title: getTitle(os),
